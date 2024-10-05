@@ -15,8 +15,8 @@
 - You need to install python libraries first: `pip install -r requirements.txt`
 
 ## Windows
-
-- Install ffmpeg: `choco install ffmpeg`
+- Install chocolatey: https://chocolatey.org/install
+- Install ffmpeg: run Power Shell with administrator: `choco install ffmpeg`
 - Install Rust: `pip install setuptools-rust`
 - You are good to go :)
 

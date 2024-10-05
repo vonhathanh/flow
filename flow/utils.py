@@ -1,6 +1,6 @@
 import os
 import wave
-from configs import *
+from flow.configs import *
 
 def process_recorded_speech(speech: str) -> str:
     return speech

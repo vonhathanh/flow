@@ -4,10 +4,10 @@ import time
 import whisper
 
 from utils import process_recorded_speech, remove_audio, save_audio
-from ignored_words import IGNORED_WORDS
-from configs import *
+from flow.ignored_words import IGNORED_WORDS
+from flow.configs import *
 
-model = whisper.load_model("small.en")
+model = whisper.load_model("tiny.en")
 
 
 def is_silent(data_chunk):

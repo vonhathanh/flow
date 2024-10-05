@@ -1,21 +1,13 @@
 import pyautogui
-import pyaudio
 import numpy as np
-import wave
 import time
 import whisper
 
+from utils import process_recorded_speech, remove_audio, save_audio
+from ignored_words import IGNORED_WORDS
+from configs import *
+
 model = whisper.load_model("small.en")
-
-# Audio parameters
-CHUNK = 1024
-FORMAT = pyaudio.paInt16
-CHANNELS = 1
-RATE = 44100
-
-# Voice Activity Detection parameters
-THRESHOLD = 500  # Adjust this value based on your microphone and environment
-SILENCE_LIMIT = 2  # Number of seconds of silence to stop the recording
 
 
 def is_silent(data_chunk):
@@ -64,28 +56,28 @@ def record_audio():
     return audio_buffer
 
 
-def save_audio(audio_buffer, filename):
-    wf = wave.open(filename, 'wb')
-    wf.setnchannels(CHANNELS)
-    wf.setsampwidth(pyaudio.get_sample_size(FORMAT))
-    wf.setframerate(RATE)
-    wf.writeframes(b''.join(audio_buffer))
-    wf.close()
-    print(f"Audio saved as {filename}")
-
-
 if __name__ == "__main__":
     while True:
         audio_data = record_audio()
-        if audio_data:
-            file_name = f"recorded_audio_{int(time.time())}.wav"
-            save_audio(audio_data, file_name)
-            result = model.transcribe(file_name)
 
-            # Type the text
-            pyautogui.typewrite(result["text"])
+        if not audio_data:
+            continue
 
-            # Press Enter
-            pyautogui.press('enter')
-        else:
-            print("No audio recorded.")
+        file_name = f"recorded_audio_{int(time.time())}.wav"
+
+        save_audio(audio_data, file_name)
+
+        result = model.transcribe(file_name)
+
+        remove_audio(file_name)
+
+        final_text = process_recorded_speech(result["text"])
+
+        if final_text in IGNORED_WORDS:
+            continue
+
+        # Type the text
+        pyautogui.typewrite(process_recorded_speech(result["text"]))
+
+        # Press Enter
+        pyautogui.press('enter')

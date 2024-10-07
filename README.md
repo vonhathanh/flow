@@ -27,7 +27,7 @@
 
 # Todos
 
-- Delete audio files after transcribe
+- ~~Delete audio files after transcribe~~
 - Remove hardcoded values
 - Better text aligment
 - Add support for Ubuntu, MacOS, Iphone, Android, Windows Phone, Rasberry Pi, Andruino
@@ -36,3 +36,4 @@
 - Auto use GPU if possible
 - Auto detect RAM and choose the most optimal model size
 - Test model with math symbols
+- Listen for sound and transcribe concurrently

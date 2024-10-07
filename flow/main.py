@@ -1,6 +1,6 @@
-import asyncio
 import multiprocessing
 import os
+import time
 
 import pyautogui
 import numpy as np
@@ -13,7 +13,7 @@ from utils import process_recorded_speech, remove_audio, save_audio, is_silent
 from flow.ignored_words import IGNORED_WORDS
 from flow.configs import *
 
-model = whisper.load_model("tiny.en")
+model = whisper.load_model("small.en")
 
 # a flag to indicate the program has been stopped, for future use
 is_stopped = False
@@ -21,7 +21,7 @@ is_stopped = False
 os.makedirs(RECORDINGS_DIR, exist_ok=True)
 
 
-async def record_audio():
+def record_audio():
     p = pyaudio.PyAudio()
     stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
 
@@ -34,7 +34,7 @@ async def record_audio():
     while True:
         data = stream.read(CHUNK)
         raw_audio_data = np.frombuffer(data, dtype=np.int16)
-
+        print(f"max: {raw_audio_data.max()}, min: {raw_audio_data.min()}, mean: {raw_audio_data.mean()}")
         silent = is_silent(raw_audio_data)
         # print("is silent ", silent)
 
@@ -62,21 +62,20 @@ async def record_audio():
         if is_stopped:
             break
 
-        await asyncio.sleep(0.01)
+        time.sleep(0.01)
 
     stream.stop_stream()
     stream.close()
     p.terminate()
 
 
-async def process_new_audio_files():
+def process_new_audio_files():
     while True:
         for file_name in sorted(glob(join(RECORDINGS_DIR, "*.wav"))):
             print("process file: ", file_name)
-            with multiprocessing.Pool(1) as pool:
-                pool.map(transcribe, (file_name,))
+            transcribe(file_name)
 
-        await asyncio.sleep(0.01) # small idle for the cpu
+        time.sleep(0.01)
 
 
 def transcribe(file_name):
@@ -97,12 +96,27 @@ def transcribe(file_name):
     pyautogui.press('enter')
 
 
-async def main():
-    await asyncio.gather(
-        record_audio(),
-        process_new_audio_files(),
-    )
+def main():
+    record_process = multiprocessing.Process(target=record_audio)
+    transcribe_process = multiprocessing.Process(target=process_new_audio_files)
+
+    record_process.start()
+    transcribe_process.start()
+
+    try:
+        while not is_stopped:
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        pass
+
+    print("Terminating processes...")
+
+    record_process.terminate()
+    transcribe_process.terminate()
+
+    record_process.join()
+    transcribe_process.join()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

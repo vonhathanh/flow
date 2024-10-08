@@ -1,3 +1,5 @@
+import os
+
 import pyaudio
 
 # Audio parameters
@@ -12,3 +14,6 @@ SILENCE_LIMIT = 1  # Number of seconds of silence to stop the recording
 
 # directory to store the audio files
 RECORDINGS_DIR = "./recordings/"
+
+# default whisper model
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", "tiny.en")

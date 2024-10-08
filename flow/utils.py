@@ -3,8 +3,8 @@ import time
 import wave
 from flow.configs import *
 
-def process_recorded_speech(speech: str) -> str:
-    return speech
+def process_recorded_speech(transcribe_result: dict) -> str:
+    return transcribe_result["text"]
 
 def save_audio(audio_buffer):
     if not is_valid_audio(audio_buffer):

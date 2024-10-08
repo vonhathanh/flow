@@ -1,6 +1,7 @@
 import multiprocessing
 import os
 import time
+import warnings
 
 import pyautogui
 import numpy as np
@@ -13,7 +14,10 @@ from utils import process_recorded_speech, remove_audio, save_audio, is_silent
 from flow.ignored_words import IGNORED_WORDS
 from flow.configs import *
 
-model = whisper.load_model("small.en")
+# Filter out the specific FutureWarning from torch.load
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+model = whisper.load_model(WHISPER_MODEL)
 
 # a flag to indicate the program has been stopped, for future use
 is_stopped = False
@@ -33,8 +37,8 @@ def record_audio():
 
     while True:
         data = stream.read(CHUNK)
-        raw_audio_data = np.frombuffer(data, dtype=np.int16)
-        print(f"max: {raw_audio_data.max()}, min: {raw_audio_data.min()}, mean: {raw_audio_data.mean()}")
+        raw_audio_data = np.frombuffer( stream.read(CHUNK), dtype=np.int16)
+        # print(f"max: {raw_audio_data.max()}, min: {raw_audio_data.min()}, mean: {raw_audio_data.mean()}")
         silent = is_silent(raw_audio_data)
         # print("is silent ", silent)
 
@@ -85,15 +89,15 @@ def transcribe(file_name):
 
     remove_audio(file_name)
 
-    final_text = process_recorded_speech(result["text"])
+    final_text = process_recorded_speech(result)
+
     if final_text in IGNORED_WORDS:
         print(f"Skipping: {final_text}")
-        return
-
-    # Type the text
-    pyautogui.typewrite(process_recorded_speech(result["text"]))
-    # Press Enter
-    pyautogui.press('enter')
+    else:
+        # Type the text
+        pyautogui.typewrite(final_text)
+        # Press Enter
+        pyautogui.press('enter')
 
 
 def main():
@@ -116,7 +120,6 @@ def main():
 
     record_process.join()
     transcribe_process.join()
-
 
 if __name__ == "__main__":
     main()

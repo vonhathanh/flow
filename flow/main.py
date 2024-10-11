@@ -1,5 +1,4 @@
 import multiprocessing
-import os
 import time
 import warnings
 
@@ -37,10 +36,9 @@ def record_audio():
 
     while True:
         data = stream.read(CHUNK)
-        raw_audio_data = np.frombuffer( stream.read(CHUNK), dtype=np.int16)
+        raw_audio_data = np.frombuffer(stream.read(CHUNK), dtype=np.int16)
         # print(f"max: {raw_audio_data.max()}, min: {raw_audio_data.min()}, mean: {raw_audio_data.mean()}")
         silent = is_silent(raw_audio_data)
-        # print("is silent ", silent)
 
         if audio_started:
             audio_buffer.append(data)
@@ -66,8 +64,6 @@ def record_audio():
         if is_stopped:
             break
 
-        time.sleep(0.01)
-
     stream.stop_stream()
     stream.close()
     p.terminate()
@@ -85,8 +81,6 @@ def process_new_audio_files():
 def transcribe(file_name):
     result = model.transcribe(file_name)
 
-    print("transcribe result: ", result)
-
     remove_audio(file_name)
 
     final_text = process_recorded_speech(result)
@@ -94,6 +88,7 @@ def transcribe(file_name):
     if final_text in IGNORED_WORDS:
         print(f"Skipping: {final_text}")
     else:
+        pyautogui.hotkey("shift", "tab")
         # Type the text
         pyautogui.typewrite(final_text)
         # Press Enter
@@ -120,6 +115,7 @@ def main():
 
     record_process.join()
     transcribe_process.join()
+
 
 if __name__ == "__main__":
     main()

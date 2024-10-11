@@ -13,6 +13,7 @@
 
 - Requirements: Python 3.10+, Windows 10, atleast 8GB of RAM
 - You need to install python libraries first: `pip install -r requirements.txt`
+- Optional: jupyter notebook: `pip install notebook`
 
 ## Windows
 - Install chocolatey: https://chocolatey.org/install
@@ -28,7 +29,7 @@
 # Todos
 
 - ~~Delete audio files after transcribe~~
-- Remove hardcoded values
+- ~~Remove hardcoded values~~
 - Better text aligment
 - Add support for Ubuntu, MacOS, Iphone, Android, Windows Phone, Rasberry Pi, Andruino
 - Try other apps and compare the performance/accuracy

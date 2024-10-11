@@ -30,7 +30,7 @@
 
 - ~~Delete audio files after transcribe~~
 - ~~Remove hardcoded values~~
-- Better text aligment
+- ~~Better text aligment~~
 - Add support for Ubuntu, MacOS, Iphone, Android, Windows Phone, Rasberry Pi, Andruino
 - Try other apps and compare the performance/accuracy
 - Test the voice detection accuracies (on-going)

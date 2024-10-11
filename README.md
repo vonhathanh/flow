@@ -34,7 +34,7 @@
 - Add support for Ubuntu, MacOS, Iphone, Android, Windows Phone, Rasberry Pi, Andruino
 - Try other apps and compare the performance/accuracy
 - Test the voice detection accuracies (on-going)
-- Auto use GPU if possible
+- Auto use GPU if possible (on-going)
 - Auto detect RAM and choose the most optimal model size
 - Test model with math symbols
 - ~~Listen for sound and transcribe concurrently~~

@@ -1,6 +1,7 @@
 import os
-
 import pyaudio
+
+from enum import StrEnum
 
 # Audio parameters
 CHUNK = 1024
@@ -17,3 +18,9 @@ RECORDINGS_DIR = "./recordings/"
 
 # default whisper model
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "tiny.en")
+
+
+class AppStatus(StrEnum):
+    LOADING = "Loading model..."
+    READY = "Ready, speak to start recording"
+    TRANSCRIBING = "Transcribing your speech..."

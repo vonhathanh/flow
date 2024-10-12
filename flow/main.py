@@ -9,6 +9,9 @@ import whisper
 from glob import glob
 from os.path import join
 
+import sys
+from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QMainWindow, QVBoxLayout, QPushButton
+
 from utils import process_recorded_speech, remove_audio, save_audio, is_silent
 from flow.ignored_words import IGNORED_WORDS
 from flow.configs import *
@@ -32,7 +35,8 @@ def record_audio():
     silent_chunks = 0
     audio_started = False
 
-    print("Listening... Speak to start recording.")
+    print(AppStatus.READY)
+    # status_label.config(text=AppStatus.READY)
 
     while True:
         data = stream.read(CHUNK)
@@ -95,27 +99,56 @@ def transcribe(file_name):
         pyautogui.press('enter')
 
 
-def main():
-    record_process = multiprocessing.Process(target=record_audio)
-    transcribe_process = multiprocessing.Process(target=process_new_audio_files)
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Voice Flow")
+        self.setGeometry(100, 100, 200, 100)
 
-    record_process.start()
-    transcribe_process.start()
+        layout = QVBoxLayout()
 
-    try:
-        while not is_stopped:
-            time.sleep(0.1)
-    except KeyboardInterrupt:
-        pass
+        self.start_button = QPushButton("Start")
+        self.start_button.clicked.connect(self.start_processes)
+        layout.addWidget(self.start_button)
 
-    print("Terminating processes...")
+        self.stop_button = QPushButton("Stop")
+        self.stop_button.clicked.connect(self.stop_processes)
+        self.stop_button.setEnabled(False)
+        layout.addWidget(self.stop_button)
 
-    record_process.terminate()
-    transcribe_process.terminate()
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
 
-    record_process.join()
-    transcribe_process.join()
+        self.record_process = multiprocessing.Process(target=record_audio)
+        self.transcribe_process = multiprocessing.Process(target=process_new_audio_files)
+
+    def start_processes(self):
+        self.record_process.start()
+        self.transcribe_process.start()
+
+        self.start_button.setEnabled(False)
+        self.stop_button.setEnabled(True)
+
+    def stop_processes(self):
+        self.record_process.terminate()
+        self.transcribe_process.terminate()
+
+        self.record_process.join()
+        self.transcribe_process.join()
+
+        print("All processes have been terminated!")
+
+        self.start_button.setEnabled(True)
+        self.stop_button.setEnabled(False)
 
 
 if __name__ == "__main__":
-    main()
+    multiprocessing.freeze_support()
+
+    app = QApplication([])
+
+    window = MainWindow()
+    window.show()
+
+    sys.exit(app.exec())

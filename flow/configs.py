@@ -17,7 +17,9 @@ SILENCE_LIMIT = 0.5  # Number of seconds of silence to stop the recording
 RECORDINGS_DIR = "./recordings/"
 
 # default whisper model
-WHISPER_MODEL = os.getenv("WHISPER_MODEL", "tiny.en")
+CURRENT_MODEL = os.getenv("WHISPER_MODEL", "tiny.en")
+
+AVAILABLE_MODELS = ["tiny.en", "base.en", "small.en", "medium.en", "large", "turbo"]
 
 
 class AppStatus(StrEnum):

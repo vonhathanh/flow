@@ -1,16 +1,16 @@
 import multiprocessing
 import time
 import warnings
-
+import sys
 import pyautogui
 import numpy as np
 import whisper
 
 from glob import glob
 from os.path import join
+from multiprocessing import Queue
 
-import sys
-from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QMainWindow, QVBoxLayout, QPushButton
+from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QMainWindow, QVBoxLayout, QPushButton, QComboBox
 
 from utils import process_recorded_speech, remove_audio, save_audio, is_silent
 from flow.ignored_words import IGNORED_WORDS
@@ -19,12 +19,12 @@ from flow.configs import *
 # Filter out the specific FutureWarning from torch.load
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-model = whisper.load_model(WHISPER_MODEL)
-
 # a flag to indicate the program has been stopped, for future use
 is_stopped = False
 
 os.makedirs(RECORDINGS_DIR, exist_ok=True)
+
+model = whisper.load_model(CURRENT_MODEL)
 
 
 def record_audio():
@@ -36,7 +36,6 @@ def record_audio():
     audio_started = False
 
     print(AppStatus.READY)
-    # status_label.config(text=AppStatus.READY)
 
     while True:
         data = stream.read(CHUNK)
@@ -73,8 +72,15 @@ def record_audio():
     p.terminate()
 
 
-def process_new_audio_files():
+def process_new_audio_files(q: Queue):
+    global model
     while True:
+        if not q.empty():
+            model_name = q.get()
+            print(f"{model_name=}")
+            model = whisper.load_model(model_name)
+            print("new model loaded successfully")
+
         for file_name in sorted(glob(join(RECORDINGS_DIR, "*.wav"))):
             print("process file: ", file_name)
             transcribe(file_name)
@@ -102,6 +108,7 @@ def transcribe(file_name):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.q = Queue()
         self.setWindowTitle("Voice Flow")
         self.setGeometry(100, 100, 200, 100)
 
@@ -110,6 +117,14 @@ class MainWindow(QMainWindow):
         self.start_button = QPushButton("Start")
         self.start_button.clicked.connect(self.start_processes)
         layout.addWidget(self.start_button)
+
+        self.model_name = QLabel("Select model: ")
+        layout.addWidget(self.model_name)
+
+        self.model_selection_combobox = QComboBox()
+        self.model_selection_combobox.addItems(AVAILABLE_MODELS)
+        self.model_selection_combobox.activated.connect(self.update_model_name)
+        layout.addWidget(self.model_selection_combobox)
 
         self.stop_button = QPushButton("Stop")
         self.stop_button.clicked.connect(self.stop_processes)
@@ -120,8 +135,13 @@ class MainWindow(QMainWindow):
         container.setLayout(layout)
         self.setCentralWidget(container)
 
+        self.model = whisper.load_model(CURRENT_MODEL)
+
         self.record_process = multiprocessing.Process(target=record_audio)
-        self.transcribe_process = multiprocessing.Process(target=process_new_audio_files)
+        self.transcribe_process = multiprocessing.Process(target=process_new_audio_files, args=(self.q,))
+
+    def update_model_name(self):
+        self.q.put(self.model_selection_combobox.currentText())
 
     def start_processes(self):
         self.record_process.start()

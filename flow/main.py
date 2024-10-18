@@ -1,4 +1,6 @@
+import json
 import multiprocessing
+import os.path
 import time
 import warnings
 import sys
@@ -8,8 +10,9 @@ import whisper
 
 from glob import glob
 from os.path import join
-from multiprocessing import Queue
+from multiprocessing import Queue, Process
 
+from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QMainWindow, QVBoxLayout, QPushButton, QComboBox
 
 from utils import process_recorded_speech, remove_audio, save_audio, is_silent
@@ -34,8 +37,6 @@ def record_audio():
     audio_buffer = []
     silent_chunks = 0
     audio_started = False
-
-    print(AppStatus.READY)
 
     while True:
         data = stream.read(CHUNK)
@@ -72,17 +73,16 @@ def record_audio():
     p.terminate()
 
 
-def process_new_audio_files(q: Queue):
+def process_new_audio_files(input_queue: Queue, output_queue: Queue):
     global model
     while True:
-        if not q.empty():
-            model_name = q.get()
+        if not input_queue.empty():
+            model_name = input_queue.get()
             print(f"{model_name=}")
             model = whisper.load_model(model_name)
-            print("new model loaded successfully")
+            output_queue.put(model_name)
 
         for file_name in sorted(glob(join(RECORDINGS_DIR, "*.wav"))):
-            print("process file: ", file_name)
             transcribe(file_name)
 
         time.sleep(0.01)
@@ -108,7 +108,8 @@ def transcribe(file_name):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.q = Queue()
+        self.output_queue = Queue()
+        self.input_queue = Queue()
         self.setWindowTitle("Voice Flow")
         self.setGeometry(100, 100, 200, 100)
 
@@ -118,12 +119,16 @@ class MainWindow(QMainWindow):
         self.start_button.clicked.connect(self.start_processes)
         layout.addWidget(self.start_button)
 
+        self.app_status = QLabel(AppStatus.READY)
+        layout.addWidget(self.app_status)
+
         self.model_name = QLabel("Select model: ")
         layout.addWidget(self.model_name)
 
         self.model_selection_combobox = QComboBox()
         self.model_selection_combobox.addItems(AVAILABLE_MODELS)
         self.model_selection_combobox.activated.connect(self.update_model_name)
+        self.model_selection_combobox.setCurrentText(CURRENT_MODEL)
         layout.addWidget(self.model_selection_combobox)
 
         self.stop_button = QPushButton("Stop")
@@ -137,18 +142,38 @@ class MainWindow(QMainWindow):
 
         self.model = whisper.load_model(CURRENT_MODEL)
 
-        self.record_process = multiprocessing.Process(target=record_audio)
-        self.transcribe_process = multiprocessing.Process(target=process_new_audio_files, args=(self.q,))
+        self.record_process: Process = None
+        self.transcribe_process: Process = None
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.check_readiness)
+        self.timer.start(100)  # Check every 100ms
+
+        # start the app immediately
+        self.start_processes()
 
     def update_model_name(self):
-        self.q.put(self.model_selection_combobox.currentText())
+        self.input_queue.put(self.model_selection_combobox.currentText())
+        with open(CONFIG_FILE, "w") as f:
+            json.dump({"model": self.model_selection_combobox.currentText()}, f)
+        self.app_status.setText(AppStatus.LOADING)
+
+    def check_readiness(self):
+        if not self.output_queue.empty():
+            self.output_queue.get()
+            self.app_status.setText(AppStatus.READY)
 
     def start_processes(self):
+        self.record_process = multiprocessing.Process(target=record_audio)
+        self.transcribe_process = multiprocessing.Process(target=process_new_audio_files,
+                                                          args=(self.input_queue, self.output_queue))
         self.record_process.start()
         self.transcribe_process.start()
 
         self.start_button.setEnabled(False)
         self.stop_button.setEnabled(True)
+
+        self.app_status.setText(AppStatus.READY)
 
     def stop_processes(self):
         self.record_process.terminate()
@@ -161,6 +186,8 @@ class MainWindow(QMainWindow):
 
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
+
+        self.app_status.setText(AppStatus.STOPPED)
 
 
 if __name__ == "__main__":

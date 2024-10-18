@@ -11,6 +11,7 @@ from os.path import join
 from multiprocessing import Queue, Process
 
 from PyQt6.QtCore import QTimer
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QMainWindow, QVBoxLayout, QPushButton, QComboBox
 
 from utils import process_recorded_speech, remove_audio, save_audio, is_silent
@@ -110,7 +111,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Voice Flow")
-        self.setGeometry(100, 100, 200, 100)
+        self.setGeometry(100, 100, 250, 150)
+        self.setWindowIcon(QIcon("../app.ico"))
 
         self.message_queue = Queue()
 

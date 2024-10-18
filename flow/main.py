@@ -27,9 +27,13 @@ os.makedirs(RECORDINGS_DIR, exist_ok=True)
 model = whisper.load_model(CURRENT_MODEL)
 
 
-def record_audio():
+def record_audio(message_queue: Queue):
     p = pyaudio.PyAudio()
-    stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+    try:
+        stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+    except OSError:
+        message_queue.put("Invalid input device")
+
 
     audio_buffer = []
     silent_chunks = 0
@@ -112,7 +116,7 @@ class MainWindow(QMainWindow):
 
         # Set up timer to check the queue periodically
         self.timer = QTimer(self)
-        self.timer.timeout.connect(self.check_message_queue)
+        self.timer.timeout.connect(self.handle_messages)
         self.timer.start(100)  # Check every 100ms
 
         layout = QVBoxLayout()
@@ -149,13 +153,16 @@ class MainWindow(QMainWindow):
         # start the app immediately
         self.start_processes()
 
-    def check_message_queue(self):
+    def handle_messages(self):
         if not self.message_queue.empty():
             # clear the queue so we can reuse it next time
-            self.message_queue.get()
-            self.app_status.setText(AppStatus.READY)
-            # stop the loading process to save resource
-            self.model_loading_process.join()
+            message = self.message_queue.get()
+            if isinstance(message, bool):
+                self.app_status.setText(AppStatus.READY)
+                # stop the loading process to save resource
+                self.model_loading_process.join()
+            elif isinstance(message, str):
+                self.app_status.setText(message)
 
     def reload_model(self):
         model_name = self.model_selection_combobox.currentText()
@@ -170,7 +177,7 @@ class MainWindow(QMainWindow):
             json.dump({"model": model_name}, f)
 
     def start_processes(self):
-        self.record_process = multiprocessing.Process(target=record_audio)
+        self.record_process = multiprocessing.Process(target=record_audio, args=(self.message_queue,))
         self.transcribe_process = multiprocessing.Process(target=process_new_audio_files)
 
         self.record_process.start()

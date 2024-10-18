@@ -38,3 +38,4 @@
 - Auto detect RAM and choose the most optimal model size
 - Test model with math symbols
 - ~~Listen for sound and transcribe concurrently~~
+- Adaptive voice threshold

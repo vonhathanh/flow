@@ -182,12 +182,21 @@ class MainWindow(QMainWindow):
         self.record_process.join()
         self.transcribe_process.join()
 
-        print("All processes have been terminated!")
-
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
 
         self.app_status.setText(AppStatus.STOPPED)
+
+    def closeEvent(self, ev):
+        self.app_status.setText(AppStatus.CLOSING)
+        if self.record_process.is_alive():
+            self.record_process.terminate()
+            self.transcribe_process.terminate()
+
+            self.record_process.join()
+            self.transcribe_process.join()
+
+        print("All processes have been terminated!")
 
 
 if __name__ == "__main__":

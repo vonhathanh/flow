@@ -9,6 +9,7 @@ class AppStatus(StrEnum):
     LOADING = "Loading new model..."
     READY = "Ready, speak to start recording"
     STOPPED = "App stopped"
+    CLOSING = "Closing app..."
 
 
 # Audio parameters

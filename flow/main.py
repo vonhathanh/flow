@@ -1,6 +1,4 @@
-import json
 import multiprocessing
-import os.path
 import time
 import warnings
 import sys
@@ -72,18 +70,18 @@ def record_audio():
     p.terminate()
 
 
-def process_new_audio_files(input_queue: Queue, output_queue: Queue):
+def reload_model(model_name: str, message_queue: Queue):
     global model
-    while True:
-        if not input_queue.empty():
-            model_name = input_queue.get()
-            print(f"{model_name=}")
-            model = whisper.load_model(model_name)
-            output_queue.put(model_name)
 
+    model = whisper.load_model(model_name)
+
+    message_queue.put(True)
+
+
+def process_new_audio_files():
+    while True:
         for file_name in sorted(glob(join(RECORDINGS_DIR, "*.wav"))):
             transcribe(file_name)
-
         time.sleep(0.01)
 
 
@@ -107,10 +105,15 @@ def transcribe(file_name):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.output_queue = Queue()
-        self.input_queue = Queue()
         self.setWindowTitle("Voice Flow")
         self.setGeometry(100, 100, 200, 100)
+
+        self.message_queue = Queue()
+
+        # Set up timer to check the queue periodically
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.check_message_queue)
+        self.timer.start(100)  # Check every 100ms
 
         layout = QVBoxLayout()
 
@@ -126,7 +129,7 @@ class MainWindow(QMainWindow):
 
         self.model_selection_combobox = QComboBox()
         self.model_selection_combobox.addItems(AVAILABLE_MODELS)
-        self.model_selection_combobox.activated.connect(self.update_model_name)
+        self.model_selection_combobox.activated.connect(self.reload_model)
         self.model_selection_combobox.setCurrentText(CURRENT_MODEL)
         layout.addWidget(self.model_selection_combobox)
 
@@ -139,33 +142,37 @@ class MainWindow(QMainWindow):
         container.setLayout(layout)
         self.setCentralWidget(container)
 
-        self.model = whisper.load_model(CURRENT_MODEL)
-
         self.record_process: Process = None
         self.transcribe_process: Process = None
-
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.check_readiness)
-        self.timer.start(100)  # Check every 100ms
+        self.model_loading_process: Process = None
 
         # start the app immediately
         self.start_processes()
 
-    def update_model_name(self):
-        self.input_queue.put(self.model_selection_combobox.currentText())
-        with open(CONFIG_FILE, "w") as f:
-            json.dump({"model": self.model_selection_combobox.currentText()}, f)
-        self.app_status.setText(AppStatus.LOADING)
-
-    def check_readiness(self):
-        if not self.output_queue.empty():
-            self.output_queue.get()
+    def check_message_queue(self):
+        if not self.message_queue.empty():
+            # clear the queue so we can reuse it next time
+            self.message_queue.get()
             self.app_status.setText(AppStatus.READY)
+            # stop the loading process to save resource
+            self.model_loading_process.join()
+
+    def reload_model(self):
+        model_name = self.model_selection_combobox.currentText()
+
+        self.app_status.setText(AppStatus.LOADING)
+        # delegates the task of loading new model to another process so
+        # the main GUI process wouldn't be blocked
+        self.model_loading_process = Process(target=reload_model, args=(model_name, self.message_queue))
+        self.model_loading_process.start()
+
+        with open(CONFIG_FILE, "w") as f:
+            json.dump({"model": model_name}, f)
 
     def start_processes(self):
         self.record_process = multiprocessing.Process(target=record_audio)
-        self.transcribe_process = multiprocessing.Process(target=process_new_audio_files,
-                                                          args=(self.input_queue, self.output_queue))
+        self.transcribe_process = multiprocessing.Process(target=process_new_audio_files)
+
         self.record_process.start()
         self.transcribe_process.start()
 

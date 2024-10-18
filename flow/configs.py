@@ -2,10 +2,10 @@ import json
 import os
 import pyaudio
 
-from enum import StrEnum
+from enum import Enum
 
 
-class AppStatus(StrEnum):
+class AppStatus(str, Enum):
     LOADING = "Loading new model..."
     READY = "Ready, speak to start recording"
     STOPPED = "App stopped"

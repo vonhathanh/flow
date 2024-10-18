@@ -16,7 +16,6 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QMainWindow, QVBoxLayout, QPushButton, QComboBox
 
 from utils import process_recorded_speech, remove_audio, save_audio, is_silent
-from flow.ignored_words import IGNORED_WORDS
 from flow.configs import *
 
 # Filter out the specific FutureWarning from torch.load

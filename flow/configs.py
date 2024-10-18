@@ -22,6 +22,8 @@ RATE = 44100
 THRESHOLD = int(os.getenv("THRESHOLD", "200"))  # Adjust this value based on your microphone and environment
 SILENCE_LIMIT = 0.5  # Number of seconds of silence to stop the recording
 
+IGNORED_WORDS = {"", " "}
+
 # directory to store the audio files
 RECORDINGS_DIR = "./recordings/"
 

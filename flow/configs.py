@@ -1,6 +1,7 @@
 import json
 import os
 import pyaudio
+import configparser
 
 from enum import Enum
 
@@ -11,6 +12,10 @@ class AppStatus(str, Enum):
     STOPPED = "App stopped"
     CLOSING = "Closing app..."
 
+CONFIG_FILE = "./config.ini"
+
+config = configparser.ConfigParser()
+config.read(CONFIG_FILE)
 
 # Audio parameters
 CHUNK = 1024
@@ -19,7 +24,7 @@ CHANNELS = 1
 RATE = 44100
 
 # Voice Activity Detection parameters
-THRESHOLD = int(os.getenv("THRESHOLD", "200"))  # Adjust this value based on your microphone and environment
+THRESHOLD = int(config["DEFAULT"]["threshold"])  # Adjust this value based on your microphone and environment
 SILENCE_LIMIT = 0.5  # Number of seconds of silence to stop the recording
 
 IGNORED_WORDS = {"", " "}
@@ -27,14 +32,7 @@ IGNORED_WORDS = {"", " "}
 # directory to store the audio files
 RECORDINGS_DIR = "./recordings/"
 
-CONFIG_FILE = "./config.json"
-
 AVAILABLE_MODELS = ["tiny.en", "base.en", "small.en", "medium.en", "large", "turbo"]
 
-if not os.path.exists(CONFIG_FILE):
-    with open(CONFIG_FILE, "w+") as f:
-        json.dump({"model": "tiny.en"}, f)
-
-with open(CONFIG_FILE, "r") as f:
-    # default whisper model
-    CURRENT_MODEL = json.load(f)["model"]
+# default whisper model
+CURRENT_MODEL = config["DEFAULT"]["model"]

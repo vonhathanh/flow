@@ -34,6 +34,7 @@ def record_audio(message_queue: Queue):
         stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
     except OSError:
         message_queue.put("Invalid input device")
+        return
 
 
     audio_buffer = []
@@ -175,8 +176,10 @@ class MainWindow(QMainWindow):
         self.model_loading_process = Process(target=reload_model, args=(model_name, self.message_queue))
         self.model_loading_process.start()
 
+        config["DEFAULT"]["model"] = model_name
+
         with open(CONFIG_FILE, "w") as f:
-            json.dump({"model": model_name}, f)
+            config.write(f)
 
     def start_processes(self):
         self.record_process = multiprocessing.Process(target=record_audio, args=(self.message_queue,))
